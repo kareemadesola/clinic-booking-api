@@ -1,0 +1,27 @@
+.gitignore
+  s_fb9a718846abb5::t_56cb80bf310df1 1-4
+README.md
+  s_fb9a718846abb5::t_edd54e13a2d826 1-18
+app.py
+  s_fb9a718846abb5::t_77adc038fd4b01 1-359
+render.yaml
+  s_fb9a718846abb5::t_84d0041354c239 1-15
+requirements.txt
+  s_fb9a718846abb5::t_21199673bbaf16 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "b795a0c04cdeeb4912b1519412e0d13fe7466d25",
+  "prompts": {},
+  "sessions": {
+    "s_fb9a718846abb5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5ca27801-e245-4c98-953d-8c4200bde31a",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "kadesola <kadesola@webmd.net>"
+    }
+  }
+}
