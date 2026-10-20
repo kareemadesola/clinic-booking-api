@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book an appointment</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1c2230; --muted:#667085; --line:#e4e7ec; --accent:#0b6b5c; --bad:#b42318; --ok-bg:#e7f6f2; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#10141b; --card:#171c26; --text:#e8ebf1; --muted:#98a2b3; --line:#2a3140; --accent:#3fb8a1; --bad:#f97066; --ok-bg:#12302a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.5 system-ui,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:1.5rem; margin:0 0 4px; } h2 { font-size:1.05rem; margin:0 0 12px; }
+  .sub { color:var(--muted); margin:0 0 20px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  .slot { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--line); }
+  .slot:first-of-type { border-top:0; }
+  .slot small { color:var(--muted); display:block; }
+  button { font:inherit; border:1px solid var(--accent); background:var(--accent); color:#fff; padding:8px 14px; border-radius:8px; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--accent); }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  label { display:block; font-size:.9rem; margin:10px 0 4px; }
+  input, select { font:inherit; width:100%; padding:9px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--text); }
+  .row { display:flex; gap:12px; flex-wrap:wrap; } .row > * { flex:1 1 220px; }
+  .msg { padding:10px 12px; border-radius:8px; margin-top:12px; }
+  .msg.err { color:var(--bad); border:1px solid var(--bad); } .msg.ok { background:var(--ok-bg); }
+  .tag { font-size:.8rem; color:var(--muted); } code { word-break:break-all; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Book an appointment</h1>
+  <p class="sub">Pick a time with one of our providers and confirm it with your details.</p>
+
+  <section>
+    <h2>Available slots</h2>
+    <label for="provider">Provider</label>
+    <select id="provider"><option value="">All providers</option></select>
+    <div id="slots" aria-live="polite"></div>
+  </section>
+
+  <section id="formCard" hidden>
+    <h2>Your details</h2>
+    <p id="chosen" class="tag"></p>
+    <form id="form" novalidate>
+      <div class="row">
+        <div><label for="name">Full name</label><input id="name" autocomplete="name" required></div>
+        <div><label for="email">Email</label><input id="email" type="email" autocomplete="email" required></div>
+      </div>
+      <p><button id="submit" type="submit">Confirm booking</button>
+         <button id="cancelPick" type="button" class="ghost">Back</button></p>
+    </form>
+    <div id="formMsg"></div>
+  </section>
+
+  <section id="confirmCard" hidden>
+    <h2>Booking confirmed</h2>
+    <div id="confirmBody"></div>
+    <p><button id="cancelBooking" class="ghost" type="button">Cancel this booking</button></p>
+    <div id="confirmMsg"></div>
+  </section>
+
+  <section>
+    <h2>Look up my bookings</h2>
+    <div class="row">
+      <div><label for="lookupEmail">Email</label><input id="lookupEmail" type="email"></div>
+      <div style="align-self:end"><button id="lookup" type="button">Find</button></div>
+    </div>
+    <div id="mine"></div>
+    <p><button id="more" class="ghost" type="button" hidden>Load more</button></p>
+  </section>
+</main>
+
+<script>
+const KEY = "__API_KEY__";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const fmt = (iso) => new Date(iso).toLocaleString([], { weekday:"short", day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" });
+let picked = null, idemKey = null, lastBooking = null, nextCursor = null, lookupEmail = "";
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { "X-API-Key": KEY, "Content-Type": "application/json", ...(opts.headers || {}) } });
+  let data = null; try { data = await res.json(); } catch {}
+  return { status: res.status, data, retry: res.headers.get("Retry-After") };
+}
+const say = (el, text, kind) => { el.innerHTML = text ? `<div class="msg ${kind}">${esc(text)}</div>` : ""; };
+
+async function loadSlots() {
+  const p = $("provider").value;
+  const { data } = await api("/slots" + (p ? "?provider=" + encodeURIComponent(p) : ""));
+  const slots = (data && data.slots) || [];
+  if (!p && $("provider").options.length === 1) {
+    [...new Set(slots.map((s) => s.provider))].forEach((n) => $("provider").add(new Option(n, n)));
+  }
+  $("slots").innerHTML = slots.length ? slots.map((s) => `
+    <div class="slot"><div><strong>${fmt(s.start)}</strong><small>${esc(s.provider)}</small></div>
+    ${s.available && new Date(s.start) > new Date()
+      ? `<button data-id="${esc(s.id)}">Book</button>`
+      : `<span class="tag">${s.available ? "Past" : "Booked"}</span>`}</div>`).join("") : '<p class="tag">No slots yet.</p>';
+  $("slots").querySelectorAll("button").forEach((b) => b.onclick = () => {
+    picked = slots.find((s) => s.id === b.dataset.id);
+    idemKey = crypto.randomUUID();
+    $("chosen").textContent = `${picked.provider}, ${fmt(picked.start)}`;
+    $("formCard").hidden = false; $("confirmCard").hidden = true; say($("formMsg"), "");
+    $("name").focus();
+  });
+}
+
+$("provider").onchange = loadSlots;
+$("cancelPick").onclick = () => { $("formCard").hidden = true; picked = null; };
+
+$("form").onsubmit = async (e) => {
+  e.preventDefault();
+  const name = $("name").value.trim(), email = $("email").value.trim();
+  if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return say($("formMsg"), "Enter your name and a valid email.", "err");
+  $("submit").disabled = true;
+  // The same key is reused if the user retries the same attempt, so a retry can never double-book.
+  const r = await api("/bookings", { method: "POST", headers: { "Idempotency-Key": idemKey }, body: JSON.stringify({ slot_id: picked.id, name, email }) });
+  $("submit").disabled = false;
+  if (r.status === 201) {
+    lastBooking = r.data; $("formCard").hidden = true; $("confirmCard").hidden = false;
+    $("confirmBody").innerHTML = `<p><strong>${esc(picked.provider)}</strong><br>${fmt(picked.start)}</p>
+      <p>${esc(r.data.name)} (${esc(r.data.email)})<br><span class="tag">Reference</span> <code>${esc(r.data.id)}</code></p>`;
+    $("cancelBooking").disabled = false; say($("confirmMsg"), "");
+    $("lookupEmail").value = r.data.email; loadSlots();
+  } else if (r.status === 409) { say($("formMsg"), "Sorry, that slot was just taken. Please pick another.", "err"); loadSlots(); }
+  else if (r.status === 429) say($("formMsg"), `Too many attempts. Try again in ${r.retry || 60} seconds.`, "err");
+  else say($("formMsg"), (r.data && r.data.error) || "Something went wrong.", "err");
+};
+
+$("cancelBooking").onclick = async () => {
+  const r = await api("/bookings/" + lastBooking.id, { method: "DELETE" });
+  if (r.status === 200) { say($("confirmMsg"), "Booking cancelled. The slot is free again.", "ok"); $("cancelBooking").disabled = true; loadSlots(); }
+  else say($("confirmMsg"), (r.data && r.data.error) || "Could not cancel.", "err");
+};
+
+async function loadMine(append) {
+  if (!append) { lookupEmail = $("lookupEmail").value.trim(); nextCursor = null; $("mine").innerHTML = ""; }
+  if (!lookupEmail) return;
+  const q = `/bookings?email=${encodeURIComponent(lookupEmail)}&limit=5` + (nextCursor ? "&cursor=" + encodeURIComponent(nextCursor) : "");
+  const { status, data } = await api(q);
+  if (status !== 200) return say($("mine"), (data && data.error) || "Lookup failed.", "err");
+  if (!append && !data.bookings.length) $("mine").innerHTML = '<p class="tag">No bookings found.</p>';
+  $("mine").insertAdjacentHTML("beforeend", data.bookings.map((b) =>
+    `<div class="slot"><div><code>${esc(b.id)}</code><small>slot ${esc(b.slot_id)} · ${esc(b.status)}</small></div></div>`).join(""));
+  nextCursor = data.next_cursor; $("more").hidden = !nextCursor;
+}
+$("lookup").onclick = () => loadMine(false);
+$("more").onclick = () => loadMine(true);
+
+loadSlots();
+</script>
+</body>
+</html>
