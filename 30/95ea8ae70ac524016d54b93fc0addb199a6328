@@ -1,0 +1,23 @@
+render.yaml
+  s_fb9a718846abb5::t_5688f822ae1dde 5
+app.py
+  s_fb9a718846abb5::t_5688f822ae1dde 15,69,71,214-232,234-235,267-269,272,275-279,294-297
+asterix_story_log.json
+  s_fb9a718846abb5::t_3cc3f9c869d2bc 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "3095ea8ae70ac524016d54b93fc0addb199a6328",
+  "prompts": {},
+  "sessions": {
+    "s_fb9a718846abb5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5ca27801-e245-4c98-953d-8c4200bde31a",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "kadesola <kadesola@webmd.net>"
+    }
+  }
+}
