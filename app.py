@@ -12,6 +12,7 @@ import hmac
 import json
 import math
 import os
+import random
 import re
 import uuid
 from contextlib import asynccontextmanager
@@ -65,8 +66,9 @@ CREATE TABLE IF NOT EXISTS idempotency (
 pool = ConnectionPool(
     DATABASE_URL,
     min_size=1,
-    max_size=int(os.environ.get("DB_POOL_MAX", "10")),
+    max_size=int(os.environ.get("DB_POOL_MAX", "20")),
     kwargs={"prepare_threshold": None, "autocommit": False},  # pgbouncer-safe
+    check=ConnectionPool.check_connection,
     open=False,
 )
 
@@ -209,18 +211,30 @@ def list_slots(provider: str | None = None):
 
 
 def check_rate_limit(conn, email):
-    """Count this attempt; return a Retry-After in seconds if the limit is hit."""
-    conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", ("rl:" + email,))
-    cur = conn.execute(
-        "SELECT count(*), EXTRACT(EPOCH FROM (min(at) + make_interval(secs => %s) - clock_timestamp())) "
-        "FROM attempts WHERE email = %s AND at > clock_timestamp() - make_interval(secs => %s)",
-        (RATE_WINDOW_SECONDS, email, RATE_WINDOW_SECONDS),
-    )
+    """Count this attempt; return a Retry-After in seconds if the limit is hit.
+
+    The advisory lock and the count-then-insert statement are pipelined into a
+    single round trip. Statements still run in order on the server, so the
+    count sees every attempt committed before the lock was granted."""
+    with conn.pipeline():
+        conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", ("rl:" + email,))
+        cur = conn.execute(
+            """
+            WITH c AS (
+                SELECT count(*) AS n, min(at) AS oldest FROM attempts
+                WHERE email = %(e)s AND at > clock_timestamp() - make_interval(secs => %(w)s)
+            ), i AS (
+                INSERT INTO attempts (email) SELECT %(e)s WHERE (SELECT n FROM c) < %(lim)s RETURNING 1
+            )
+            SELECT n, EXTRACT(EPOCH FROM (oldest + make_interval(secs => %(w)s) - clock_timestamp())) FROM c
+            """,
+            {"e": email, "w": RATE_WINDOW_SECONDS, "lim": RATE_LIMIT},
+        )
     count, wait = cur.fetchone()
+    if random.random() < 0.02:  # keep the table small without a delete on every request
+        conn.execute("DELETE FROM attempts WHERE at < clock_timestamp() - interval '10 minutes'")
     if count >= RATE_LIMIT:
         return max(1, math.ceil(wait or RATE_WINDOW_SECONDS))
-    conn.execute("INSERT INTO attempts (email) VALUES (%s)", (email,))
-    conn.execute("DELETE FROM attempts WHERE at < clock_timestamp() - interval '10 minutes'")
     return None
 
 
@@ -248,20 +262,21 @@ def create_booking(conn, data):
     if not valid_email:
         return 400, {"error": "email is not valid"}, None
 
-    slot = rows(conn, "SELECT id, start_at <= clock_timestamp() AS started FROM slots WHERE id = %s", (slot_id,))
-    if not slot:
-        return 404, {"error": "slot not found"}, None
-    if slot[0]["started"]:
-        return 400, {"error": "slot has already started"}, None
-
     created = rows(
         conn,
-        "INSERT INTO bookings (id, slot_id, name, email, status) VALUES (%s, %s, %s, %s, 'confirmed') "
+        "INSERT INTO bookings (id, slot_id, name, email, status) "
+        "SELECT %s, s.id, %s, %s, 'confirmed' FROM slots s "
+        "WHERE s.id = %s AND s.start_at > clock_timestamp() "
         "ON CONFLICT (slot_id) WHERE status = 'confirmed' DO NOTHING "
         f"RETURNING {BOOKING_COLS}",
-        (uuid.uuid4().hex, slot_id, name, email),
+        (uuid.uuid4().hex, name, email, slot_id),
     )
     if not created:
+        slot = rows(conn, "SELECT start_at <= clock_timestamp() AS started FROM slots WHERE id = %s", (slot_id,))
+        if not slot:
+            return 404, {"error": "slot not found"}, None
+        if slot[0]["started"]:
+            return 400, {"error": "slot has already started"}, None
         return 409, {"error": "slot already booked"}, None
     return 201, booking_json(created[0]), None
 
@@ -276,8 +291,10 @@ async def post_booking(request: Request):
 
     with pool.connection() as conn:
         if key:
-            conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", ("idem:" + key,))
-            seen = rows(conn, "SELECT body_hash, status, response FROM idempotency WHERE key = %s", (key,))
+            with conn.pipeline():
+                conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", ("idem:" + key,))
+                cur = conn.execute("SELECT body_hash, status, response FROM idempotency WHERE key = %s", (key,))
+            seen = [dict(zip(("body_hash", "status", "response"), r)) for r in cur.fetchall()]
             if seen:
                 if seen[0]["body_hash"] != body_hash:
                     return err(422, "Idempotency-Key was already used with a different request body")
