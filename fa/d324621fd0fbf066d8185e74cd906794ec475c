@@ -1,0 +1,20 @@
+static/index.html
+  s_fb9a718846abb5::t_71249f8df4525c 35
+  s_fb9a718846abb5::t_5c49035cfa4aff 6-9,11-17,19-23,26-34,36-84,88-99,101-112,115-129,131-149,151-152,154-155,163-167,170-211,215-218,221-222,227-230,232,234-240,244,246-247,251,256-261,266
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "fad324621fd0fbf066d8185e74cd906794ec475c",
+  "prompts": {},
+  "sessions": {
+    "s_fb9a718846abb5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5ca27801-e245-4c98-953d-8c4200bde31a",
+        "model": "unknown"
+      },
+      "human_author": "kadesola <kadesola@webmd.net>"
+    }
+  }
+}
