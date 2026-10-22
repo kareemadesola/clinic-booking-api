@@ -1,0 +1,50 @@
+app/services/idempotency.py
+  s_fb9a718846abb5::t_58e87788b542c2 1-28
+app/http.py
+  s_fb9a718846abb5::t_81f9183bc3744a 1-17
+README.md
+  s_fb9a718846abb5::t_ebea20004b294b 14-15
+  s_fb9a718846abb5::t_347c1856e57c82 19-29
+app/services/booking.py
+  s_fb9a718846abb5::t_557efef8e32847 1-95
+app/db.py
+  s_fb9a718846abb5::t_1c2b2b7a45a7a4 1-62
+app/routes/slots.py
+  s_fb9a718846abb5::t_b8e21adeb04af5 1-34
+app/routes/bookings.py
+  s_fb9a718846abb5::t_fc08439a6099fe 1-72
+app/timeutil.py
+  s_fb9a718846abb5::t_4681f6e0fe8d39 1-19
+render.yaml
+  s_fb9a718846abb5::t_ebea20004b294b 8
+app/services/rate_limit.py
+  s_fb9a718846abb5::t_2747bb1c777861 1-33
+app/routes/pages.py
+  s_fb9a718846abb5::t_f78df7c836c313 1-18
+app/main.py
+  s_fb9a718846abb5::t_d142b76ad7b2a5 1-35
+app/config.py
+  s_fb9a718846abb5::t_622f34cb07f426 1-14
+app/routes/admin.py
+  s_fb9a718846abb5::t_e076920ada0e11 1-37
+app/services/pagination.py
+  s_fb9a718846abb5::t_da64561188e2eb 1-15
+app/auth.py
+  s_fb9a718846abb5::t_029e7a0c2eb9b1 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "e77b83a2fe97969f4bc942349c35f6ba5efe6ccf",
+  "prompts": {},
+  "sessions": {
+    "s_fb9a718846abb5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5ca27801-e245-4c98-953d-8c4200bde31a",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "kadesola <kadesola@webmd.net>"
+    }
+  }
+}
