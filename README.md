@@ -11,8 +11,19 @@ FastAPI + Postgres implementation of the Koya assessment spec (levels 1-5), with
 ## Run locally
     export DATABASE_URL=postgresql://user:pw@localhost:5432/clinic API_KEY=choose-a-key
     pip install -r requirements.txt
-    uvicorn app:app --port 8000
-    BASE_URL=http://127.0.0.1:8000 pytest -q test_api.py
+    uvicorn app.main:app --port 8000
+    BASE_URL=http://127.0.0.1:8000 pytest -q tests/test_api.py
 
 ## Deploy
 Neon (Postgres) for `DATABASE_URL`, Render (see `render.yaml`) for the web service. Set `API_KEY` and `DATABASE_URL` in Render.
+
+## Layout
+    app/main.py              app, middleware, error handler, routers
+    app/config.py, db.py     settings; connection pool and schema
+    app/auth.py              X-API-Key check
+    app/routes/              thin HTTP handlers: pages, admin (/reset), slots, bookings
+    app/services/booking.py      booking and cancel (single insert, ON CONFLICT)
+    app/services/idempotency.py  Idempotency-Key lookup and storage
+    app/services/rate_limit.py   per-email sliding window
+    app/services/pagination.py   opaque cursor
+    tests/test_api.py        black-box tests against any running URL
