@@ -28,6 +28,14 @@
   .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
   header { background: var(--surface); border-bottom: 1px solid var(--line); }
   header .wrap { padding-block: 22px; display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 24px; }
+  .tabs { display: flex; gap: 6px; width: 100%; margin-top: 6px; }
+  .tab { font: inherit; font-weight: 600; font-size: .95rem; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--muted); padding: 8px 14px; cursor: pointer; }
+  .tab[aria-pressed="true"] { color: var(--brand); border-bottom-color: var(--brand); }
+  .tab:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .slotscroll { max-height: min(640px, calc(100vh - 220px)); overflow-y: auto; padding-right: 6px; }
+  @media (max-width: 820px) { .slotscroll { max-height: none; overflow: visible; padding-right: 0; } }
+  header { position: sticky; top: 0; z-index: 5; }
+  @media (max-width: 820px) { header p { display: none; } header .wrap { padding-block: 12px 0; } h1 { font-size: 1.5rem; } }
   h1 { font: 400 clamp(1.7rem, 4vw, 2.3rem)/1.1 var(--display); margin: 0; }
   header p { margin: 0; color: var(--muted); max-width: 46ch; }
   h2 { font: 400 1.35rem/1.2 var(--display); margin: 0 0 14px; }
@@ -56,7 +64,7 @@
   .slot:disabled b { text-decoration: line-through; color: var(--muted); }
   .empty { color: var(--muted); }
 
-  aside { position: sticky; top: 16px; }
+  aside { position: sticky; top: 130px; }
   @media (max-width: 820px) { aside { position: static; } }
   .summary { display: grid; gap: 2px; padding: 12px 14px; border-radius: 10px; background: var(--brand-soft); margin-bottom: 14px; }
   .summary b { font-weight: 600; }
@@ -89,6 +97,10 @@
   <div class="wrap">
     <h1>Book a visit</h1>
     <p>Choose a time with one of our providers. You will get a reference number to keep.</p>
+    <nav class="tabs" aria-label="Sections">
+      <button class="tab" id="tabBook" type="button" aria-pressed="true">Book</button>
+      <button class="tab" id="tabMine" type="button" aria-pressed="false">My bookings</button>
+    </nav>
   </div>
 </header>
 
@@ -98,11 +110,11 @@
     <span>The server is waking up. The first request can take up to a minute.</span>
   </div>
 
-  <div class="layout">
+  <div class="layout" id="viewBook">
     <section class="card" aria-labelledby="slotsTitle">
       <h2 id="slotsTitle">Available times</h2>
       <div id="providers" class="chips" role="group" aria-label="Filter by provider"></div>
-      <div id="slots" aria-live="polite"><p class="empty">Loading times...</p></div>
+      <div class="slotscroll"><div id="slots" aria-live="polite"><p class="empty">Loading times...</p></div></div>
       <p class="tag" style="margin:16px 0 0">Times are shown in your local time zone.</p>
     </section>
 
@@ -145,7 +157,7 @@
     </aside>
   </div>
 
-  <section class="card" aria-labelledby="mineTitle">
+  <section class="card" id="viewMine" aria-labelledby="mineTitle" hidden>
     <h2 id="mineTitle">Find my bookings</h2>
     <div class="row">
       <div><label for="lookupEmail">Email</label><input id="lookupEmail" type="email" autocomplete="email" inputmode="email"></div>
@@ -264,6 +276,16 @@ async function loadMine(append) {
 $("lookup").onclick = () => loadMine(false);
 $("more").onclick = () => loadMine(true);
 $("lookupEmail").addEventListener("keydown", (e) => { if (e.key === "Enter") loadMine(false); });
+
+function view(name) {
+  const mine = name === "mine";
+  $("viewBook").hidden = mine; $("viewMine").hidden = !mine;
+  $("tabBook").setAttribute("aria-pressed", !mine); $("tabMine").setAttribute("aria-pressed", mine);
+  if (mine) $("lookupEmail").focus();
+  window.scrollTo({ top: 0 });
+}
+$("tabBook").onclick = () => view("book");
+$("tabMine").onclick = () => view("mine");
 
 loadSlots();
 </script>
