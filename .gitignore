@@ -2,3 +2,4 @@
 __pycache__/
 .env
 .pytest_cache/
+asterix_story_log.json
