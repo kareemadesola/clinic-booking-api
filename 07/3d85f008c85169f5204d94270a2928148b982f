@@ -1,0 +1,20 @@
+static/index.html
+  s_fb9a718846abb5::t_744a48e0035cfe 30-32
+  s_fb9a718846abb5::t_9acab56a75ddfd 33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "073d85f008c85169f5204d94270a2928148b982f",
+  "prompts": {},
+  "sessions": {
+    "s_fb9a718846abb5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5ca27801-e245-4c98-953d-8c4200bde31a",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "kadesola <kadesola@webmd.net>"
+    }
+  }
+}
