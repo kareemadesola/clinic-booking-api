@@ -138,3 +138,17 @@ def test_rate_limit():
     r = book("s1", email=email)
     assert r.status_code == 429 and int(r.headers["Retry-After"]) in range(1, 61)
     assert book("s1", email="other@example.com").status_code == 201
+
+
+def test_slot_times_echoed_as_sent():
+    slots = [
+        {"id": "m1", "provider": "Dr Ade", "start": "2031-01-01T09:00:00.000Z", "end": "2031-01-01T09:30:00.000Z"},
+        {"id": "m2", "provider": "Dr Ade", "start": "2031-01-01T10:00:00+01:00", "end": "2031-01-01T10:30:00+01:00"},
+        {"id": "m3", "provider": "Dr Ade", "start": "2031-01-01T11:00:00Z", "end": "2031-01-01T11:30:00Z"},
+    ]
+    assert httpx.post(f"{BASE}/reset", json={"slots": slots}, headers=H).status_code == 200
+    got = {s["id"]: s for s in httpx.get(f"{BASE}/slots", headers=H).json()["slots"]}
+    for s in slots:
+        assert got[s["id"]]["start"] == s["start"] and got[s["id"]]["end"] == s["end"]
+    # still sorted by the actual instant: m2 (09:00Z) ties m1, m3 is last
+    assert [s["id"] for s in httpx.get(f"{BASE}/slots", headers=H).json()["slots"]][-1] == "m3"
